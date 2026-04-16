@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Term {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  content     String
+  version     String
+  status      TermStatus @default(ACTIVE)
+  contentHash String
+  publicToken String    @unique @default(uuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  consents    Consent[]
+  accesses    TermAccess[]
+
+  @@index([publicToken])
+}
+
+model Student {
+  id        String    @id @default(cuid())
+  name      String
+  cpf       String
+  email     String
+  createdAt DateTime  @default(now())
+  consents  Consent[]
+
+  @@unique([cpf, email])
+}
+
+model Consent {
+  id          String      @id @default(cuid())
+  termId       String
+  studentId    String
+  accepted     Boolean     @default(false)
+  acceptedAt   DateTime?
+  ip           String
+  userAgent    String
+  uniqueToken  String      @unique @default(uuid())
+  protocol     String      @unique
+  termSnapshot String
+  termHash     String
+  pdfPath      String?
+  createdAt    DateTime    @default(now())
+  term         Term        @relation(fields: [termId], references: [id])
+  student      Student     @relation(fields: [studentId], references: [id])
+  auditLogs    AuditLog[]
+
+  @@unique([termId, studentId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  consentId String
+  action    String
+  metadata  Json
+  createdAt DateTime @default(now())
+  consent   Consent  @relation(fields: [consentId], references: [id])
+
+  @@index([consentId])
+}
+
+model TermAccess {
+  id        String   @id @default(cuid())
+  termId    String
+  ip        String
+  userAgent String
+  createdAt DateTime @default(now())
+  term      Term     @relation(fields: [termId], references: [id])
+
+  @@index([termId])
+}
+
+enum TermStatus {
+  ACTIVE
+  INACTIVE
+}
